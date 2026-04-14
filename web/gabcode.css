@@ -1,0 +1,665 @@
+/* gabcode web shell — styles */
+
+:root {
+    --bg: #ffffff;
+    --bg-sub: #f7f7f8;
+    --bg-hover: #ececf1;
+    --bg-active: #e5e5ea;
+    --border: #e5e5e5;
+    --border-strong: #c7c7cc;
+    --text: #1d1d1f;
+    --text-sub: #6e6e73;
+    --text-dim: #a0a0a5;
+    --accent: #2563eb;
+    --accent-hover: #1d4ed8;
+    --accent-text: #ffffff;
+    --danger: #dc2626;
+    --danger-hover: #b91c1c;
+    --code-bg: #f4f4f5;
+    --tool-bg: #fef3c7;
+    --tool-border: #fde68a;
+    --result-bg: #dbeafe;
+    --result-border: #bfdbfe;
+    --font-ui: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+    --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+}
+
+@media (prefers-color-scheme: dark) {
+    :root {
+        --bg: #1c1c1e;
+        --bg-sub: #2c2c2e;
+        --bg-hover: #3a3a3c;
+        --bg-active: #48484a;
+        --border: #3a3a3c;
+        --border-strong: #5a5a5c;
+        --text: #f2f2f7;
+        --text-sub: #aeaeb2;
+        --text-dim: #8e8e93;
+        --accent: #3b82f6;
+        --accent-hover: #60a5fa;
+        --accent-text: #ffffff;
+        --code-bg: #2c2c2e;
+        --tool-bg: #3a2f1a;
+        --tool-border: #5a4a26;
+        --result-bg: #1e2f47;
+        --result-border: #2e4a6e;
+    }
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    font-family: var(--font-ui);
+    color: var(--text);
+    background: var(--bg);
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+#app {
+    display: grid;
+    grid-template-columns: 260px 1fr 280px;
+    grid-template-rows: 1fr;
+    height: 100vh;
+    overflow: hidden;
+}
+
+/* ── Sidebar (left) ──────────────────────────────── */
+
+#sidebar {
+    background: var(--bg-sub);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+}
+
+.sidebar-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+}
+
+.sidebar-header h1 {
+    margin: 0;
+    font-size: 15px;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+}
+
+#chat-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 8px;
+}
+
+.chat-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 10px;
+    margin-bottom: 2px;
+    border-radius: 6px;
+    cursor: pointer;
+    color: var(--text);
+    font-size: 13px;
+    transition: background 0.1s;
+    gap: 8px;
+}
+
+.chat-item:hover {
+    background: var(--bg-hover);
+}
+
+.chat-item.active {
+    background: var(--bg-active);
+    font-weight: 500;
+}
+
+.chat-item-name {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.chat-item-delete {
+    opacity: 0;
+    font-size: 14px;
+    padding: 0 4px;
+    background: none;
+    border: none;
+    color: var(--text-dim);
+    cursor: pointer;
+    flex-shrink: 0;
+}
+
+.chat-item:hover .chat-item-delete,
+.chat-item.active .chat-item-delete {
+    opacity: 1;
+}
+
+.chat-item-delete:hover {
+    color: var(--danger);
+}
+
+.sidebar-footer {
+    padding: 8px;
+    border-top: 1px solid var(--border);
+}
+
+.sidebar-empty {
+    padding: 24px 16px;
+    color: var(--text-dim);
+    font-size: 13px;
+    text-align: center;
+}
+
+/* ── Conversation (middle) ───────────────────────── */
+
+#conversation {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    min-height: 0;
+    background: var(--bg);
+}
+
+#conv-header {
+    padding: 12px 24px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    min-height: 48px;
+}
+
+.title-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+#conv-title {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text);
+}
+
+.rename-input {
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 500;
+    padding: 2px 8px;
+    border: 1px solid var(--accent);
+    border-radius: 4px;
+    background: var(--bg);
+    color: var(--text);
+    outline: none;
+    min-width: 240px;
+}
+
+#conv-meta {
+    font-size: 12px;
+    color: var(--text-dim);
+    font-family: var(--font-mono);
+}
+
+#messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.msg {
+    max-width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.msg-role {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-weight: 600;
+    color: var(--text-sub);
+}
+
+.msg-body {
+    padding: 10px 14px;
+    border-radius: 8px;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    font-size: 14px;
+}
+
+.msg.user .msg-body {
+    background: var(--bg-sub);
+    border: 1px solid var(--border);
+    align-self: flex-end;
+    max-width: 80%;
+}
+
+.msg.user .msg-role {
+    align-self: flex-end;
+}
+
+.msg.assistant .msg-body {
+    background: var(--bg);
+    border: 1px solid var(--border);
+}
+
+.msg.system .msg-body {
+    background: var(--bg-sub);
+    border: 1px dashed var(--border-strong);
+    color: var(--text-sub);
+    font-family: var(--font-mono);
+    font-size: 12px;
+}
+
+.msg.tool-call {
+    font-family: var(--font-mono);
+    font-size: 12px;
+}
+
+.msg.tool-call .msg-body {
+    background: var(--tool-bg);
+    border: 1px solid var(--tool-border);
+    padding: 8px 12px;
+}
+
+.msg.tool-result .msg-body {
+    background: var(--result-bg);
+    border: 1px solid var(--result-border);
+    font-family: var(--font-mono);
+    font-size: 12px;
+    max-height: 240px;
+    overflow-y: auto;
+}
+
+.msg.tool-result.error .msg-body {
+    background: #fee2e2;
+    border-color: #fecaca;
+    color: #991b1b;
+}
+
+.msg-body code {
+    font-family: var(--font-mono);
+    background: var(--code-bg);
+    padding: 1px 4px;
+    border-radius: 3px;
+    font-size: 13px;
+}
+
+.msg-body pre {
+    background: var(--code-bg);
+    padding: 12px;
+    border-radius: 6px;
+    overflow-x: auto;
+    margin: 8px 0;
+}
+
+.msg-body pre code {
+    background: none;
+    padding: 0;
+}
+
+.msg-body a {
+    color: var(--accent);
+    text-decoration: none;
+}
+
+.msg-body a:hover {
+    text-decoration: underline;
+}
+
+.empty-state {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-dim);
+    font-size: 14px;
+}
+
+#composer {
+    border-top: 1px solid var(--border);
+    padding: 12px 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    background: var(--bg);
+}
+
+#input {
+    width: 100%;
+    resize: vertical;
+    min-height: 60px;
+    max-height: 240px;
+    padding: 10px 12px;
+    border: 1px solid var(--border-strong);
+    border-radius: 6px;
+    font-family: var(--font-ui);
+    font-size: 14px;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.5;
+    outline: none;
+    transition: border-color 0.1s;
+}
+
+#input:focus {
+    border-color: var(--accent);
+}
+
+#input:disabled {
+    background: var(--bg-sub);
+    color: var(--text-dim);
+    cursor: not-allowed;
+}
+
+.composer-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 12px;
+}
+
+#status {
+    flex: 1;
+    font-size: 12px;
+    color: var(--text-dim);
+    font-family: var(--font-mono);
+}
+
+/* ── File tree (right) ───────────────────────────── */
+
+#filetree {
+    background: var(--bg-sub);
+    border-left: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+}
+
+.panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+}
+
+.panel-header h3 {
+    margin: 0;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-sub);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+#tree-root {
+    flex: 1;
+    overflow-y: auto;
+    padding: 8px;
+    font-family: var(--font-mono);
+    font-size: 12px;
+}
+
+.tree-node {
+    padding: 3px 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.tree-node:hover {
+    background: var(--bg-hover);
+}
+
+.tree-node.dir {
+    color: var(--text-sub);
+    font-weight: 500;
+}
+
+.tree-node.file {
+    color: var(--text);
+}
+
+.tree-icon {
+    width: 12px;
+    display: inline-block;
+    text-align: center;
+    flex-shrink: 0;
+}
+
+.tree-children {
+    padding-left: 16px;
+}
+
+.tree-empty {
+    padding: 16px;
+    color: var(--text-dim);
+    text-align: center;
+    font-family: var(--font-ui);
+}
+
+/* ── Buttons ─────────────────────────────────────── */
+
+button {
+    font-family: inherit;
+    font-size: 13px;
+    cursor: pointer;
+}
+
+.icon-btn {
+    width: 28px;
+    height: 28px;
+    border: 1px solid transparent;
+    border-radius: 6px;
+    background: transparent;
+    color: var(--text);
+    font-size: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    line-height: 1;
+}
+
+.icon-btn:hover {
+    background: var(--bg-hover);
+    border-color: var(--border);
+}
+
+.text-btn {
+    border: 1px solid var(--border-strong);
+    border-radius: 6px;
+    padding: 6px 12px;
+    background: var(--bg);
+    color: var(--text);
+    font-size: 13px;
+}
+
+.text-btn:hover {
+    background: var(--bg-hover);
+}
+
+.primary-btn {
+    border: 1px solid var(--accent);
+    background: var(--accent);
+    color: var(--accent-text);
+    border-radius: 6px;
+    padding: 6px 14px;
+    font-size: 13px;
+    font-weight: 500;
+}
+
+.primary-btn:hover:not(:disabled) {
+    background: var(--accent-hover);
+    border-color: var(--accent-hover);
+}
+
+.primary-btn:disabled {
+    background: var(--bg-hover);
+    color: var(--text-dim);
+    border-color: var(--border-strong);
+    cursor: not-allowed;
+}
+
+.primary-btn.danger {
+    background: var(--danger);
+    border-color: var(--danger);
+}
+
+.primary-btn.danger:hover {
+    background: var(--danger-hover);
+    border-color: var(--danger-hover);
+}
+
+/* ── Modals ──────────────────────────────────────── */
+
+.modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.4);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+}
+
+.modal {
+    background: var(--bg);
+    border-radius: 10px;
+    padding: 24px;
+    min-width: 420px;
+    max-width: 560px;
+    max-height: 85vh;
+    overflow-y: auto;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.25);
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.modal h2 {
+    margin: 0 0 4px;
+    font-size: 18px;
+    font-weight: 600;
+}
+
+.modal p {
+    margin: 0;
+    color: var(--text-sub);
+    font-size: 14px;
+}
+
+.modal label {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    font-size: 12px;
+    color: var(--text-sub);
+    font-weight: 500;
+}
+
+.modal label input,
+.modal label select {
+    padding: 8px 10px;
+    border: 1px solid var(--border-strong);
+    border-radius: 5px;
+    font-family: inherit;
+    font-size: 13px;
+    background: var(--bg);
+    color: var(--text);
+    outline: none;
+}
+
+.modal label input:focus,
+.modal label select:focus {
+    border-color: var(--accent);
+}
+
+.model-row {
+    display: flex;
+    gap: 8px;
+}
+
+.model-row select,
+.model-row input {
+    flex: 1;
+    min-width: 0;
+}
+
+.modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-top: 8px;
+}
+
+.modal-actions [name="reset"] {
+    margin-right: auto;
+}
+
+.text-btn.danger {
+    color: var(--danger);
+    border-color: var(--danger);
+}
+
+.text-btn.danger:hover {
+    background: var(--danger);
+    color: var(--accent-text);
+}
+
+.modal-error {
+    color: var(--danger);
+    font-size: 12px;
+    min-height: 16px;
+    font-family: var(--font-mono);
+}
+
+.file-modal {
+    min-width: 600px;
+    max-width: 90vw;
+    max-height: 90vh;
+}
+
+.file-modal textarea {
+    background: var(--code-bg);
+    color: var(--text);
+    padding: 14px;
+    border: 1px solid var(--border-strong);
+    border-radius: 6px;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    flex: 1;
+    min-height: 300px;
+    max-height: 60vh;
+    resize: vertical;
+    outline: none;
+    width: 100%;
+    line-height: 1.5;
+    white-space: pre;
+}
+
+.file-modal textarea:focus {
+    border-color: var(--accent);
+}

@@ -35,7 +35,7 @@ that embeds the core.
 
 ```
 ┌──────────────────────────────────────────────┐
-│  Shell  (cli/, future: wasm/, gui/)          │
+│  Shell  (cli/, web/, future: gui/)           │
 │  - Terminal I/O, libcurl, POSIX files        │
 │  - Implements gab_host_fns_t                 │
 └──────────────────┬───────────────────────────┘
@@ -950,8 +950,8 @@ asynchronously from the JS runtime. The key adjustments compared to the CLI:
 - **Compile the core with Emscripten:**
 
   ```sh
-  emcmake cmake -B build-wasm
-  cmake --build build-wasm
+  emcmake cmake -B web_build
+  cmake --build web_build
   # Produces gabcore_static.a compatible with Emscripten-linked JS shells.
   ```
 
@@ -1022,6 +1022,22 @@ gabcode/
 │   ├── main.cpp                       # REPL, event callback, first-run
 │   ├── host_impl.{h,cpp}              # POSIX + libcurl implementations
 │   └── terminal.{h,cpp}               # Line input, /stop background thread
+│
+├── web/                               # Web shell (vanilla JS/HTML/CSS, no deps)
+│   ├── index.html                     # Three-pane layout, modal templates
+│   ├── gabcode.css                    # Styles (light/dark via prefers-color-scheme)
+│   ├── gabcode.js                     # Entry point, Session, event wiring
+│   ├── vfs.js                         # IndexedDB-backed per-chat virtual FS
+│   ├── chats.js                       # Chat CRUD, active-chat persistence
+│   ├── config.js                      # Settings + `/v1/models` probe (JS re-impl)
+│   ├── prompts.js                     # Default prompts + read/write helpers
+│   ├── skills.js                      # SkillLoader: scan, load, summaries
+│   ├── agents.js                      # web_search / explore / compactor
+│   ├── history.js                     # JSONL log + rehydration
+│   ├── parser.js                      # <tool>name(args)</tool> parser
+│   ├── tools.js                       # 10 tools + bash builtins (ls/mkdir/…)
+│   ├── llm.js                         # SSE streaming + turn loop + compaction
+│   └── ui.js                          # DOM renderers, modals, file editor
 │
 ├── deps/
 │   ├── CMakeLists.txt                 # Header-only INTERFACE target

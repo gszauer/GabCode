@@ -48,14 +48,19 @@ tomorrow.
 Requires: CMake 3.20+, a C++20 compiler, libcurl.
 
 ```sh
-./build.sh          # configure + build (incremental)
+./build.sh          # build CLI + stage web shell (incremental)
 ./build.sh test     # build and run all tests
-./build.sh clean    # wipe build/ and the gabcode binary
+./build.sh web      # stage web/ sources to web_build/ only
+./build.sh clean    # wipe build/, web_build/, and the gabcode binary
 ```
 
-The executable lands at `./gabcode` in the project root.
+The CLI lands at `./gabcode` in the project root. The web shell is staged to
+`web_build/` — open `web_build/index.html` via any static HTTP server (e.g.
+`python3 -m http.server` from `web_build/`) and configure it from the gear
+icon in the sidebar. Each chat lives in its own IndexedDB-backed `.gab/`, so
+state is isolated per conversation.
 
-## Run
+## Run (CLI)
 
 ```sh
 ./gabcode
@@ -119,6 +124,7 @@ gabcode/
 ├── CMakeLists.txt
 ├── core/                # portable C++20 library (all .h and .cpp flat)
 ├── cli/                 # CLI shell (main, host_impl, terminal)
+├── web/                 # Web shell (vanilla JS/HTML/CSS — IndexedDB VFS, streaming chat)
 ├── deps/                # vendored deps (nlohmann/json.hpp)
 ├── tests/               # assert-based unit tests
 └── .gab/                # per-project state (created on first run)

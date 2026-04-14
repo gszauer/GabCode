@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>gabcode</title>
+    <link rel="stylesheet" href="gabcode.css">
+</head>
+<body>
+    <div id="app">
+        <aside id="sidebar">
+            <div class="sidebar-header">
+                <h1>gabcode</h1>
+                <button id="btn-new-chat" class="icon-btn" title="New chat">+</button>
+            </div>
+            <nav id="chat-list"></nav>
+            <div class="sidebar-footer">
+                <button id="btn-config" class="text-btn" title="Settings">⚙ Settings</button>
+            </div>
+        </aside>
+
+        <main id="conversation">
+            <header id="conv-header">
+                <div class="title-row">
+                    <h2 id="conv-title">No chat selected</h2>
+                    <button id="btn-rename" class="icon-btn" title="Rename chat" style="display:none">✎</button>
+                </div>
+                <div id="conv-meta"></div>
+            </header>
+            <div id="messages"></div>
+            <div id="composer">
+                <textarea id="input" placeholder="Message gabcode... (⌘↵ to send)" rows="3" disabled></textarea>
+                <div class="composer-actions">
+                    <span id="status"></span>
+                    <button id="btn-stop" class="text-btn" style="display:none">Stop</button>
+                    <button id="btn-send" class="primary-btn" disabled>Send</button>
+                </div>
+            </div>
+        </main>
+
+        <aside id="filetree">
+            <div class="panel-header">
+                <h3>Files</h3>
+                <button id="btn-refresh-tree" class="icon-btn" title="Refresh">↻</button>
+            </div>
+            <div id="tree-root" class="tree"></div>
+        </aside>
+    </div>
+
+    <div id="modal-root"></div>
+
+    <template id="tpl-config-modal">
+        <div class="modal-backdrop">
+            <div class="modal">
+                <h2>Settings</h2>
+                <label>
+                    API base URL
+                    <input type="text" name="apiBaseUrl" placeholder="http://localhost:1234/v1">
+                </label>
+                <label>
+                    API key
+                    <input type="text" name="apiKey" placeholder="(any string for local)">
+                </label>
+                <label>
+                    Model
+                    <div class="model-row">
+                        <select name="model"><option value="">— probe first —</option></select>
+                        <button type="button" class="text-btn" name="probe">Probe</button>
+                    </div>
+                </label>
+                <label>
+                    Max context tokens
+                    <div class="model-row">
+                        <input type="number" name="maxContextTokens" min="1" placeholder="auto-detect">
+                        <button type="button" class="text-btn" name="probeContext">Probe</button>
+                    </div>
+                </label>
+                <label>
+                    Brave Search API key (optional)
+                    <input type="text" name="braveApiKey" placeholder="leave blank to disable web search">
+                </label>
+                <label>
+                    Max tool calls per turn
+                    <input type="number" name="maxToolCallsPerTurn" min="1" value="10">
+                </label>
+                <div class="modal-error" name="error"></div>
+                <div class="modal-actions">
+                    <button type="button" class="text-btn danger" name="reset">Reset all</button>
+                    <button type="button" class="text-btn" name="cancel">Cancel</button>
+                    <button type="button" class="primary-btn" name="save">Save</button>
+                </div>
+            </div>
+        </div>
+    </template>
+
+    <template id="tpl-switch-modal">
+        <div class="modal-backdrop">
+            <div class="modal">
+                <h2>Switch chat?</h2>
+                <p>The current chat is still generating. Switching will cancel the in-flight request — any partial turn will be rolled back.</p>
+                <div class="modal-actions">
+                    <button type="button" class="text-btn" name="cancel">Stay</button>
+                    <button type="button" class="primary-btn" name="confirm">Cancel &amp; switch</button>
+                </div>
+            </div>
+        </div>
+    </template>
+
+    <template id="tpl-file-modal">
+        <div class="modal-backdrop">
+            <div class="modal file-modal">
+                <h2 name="title"></h2>
+                <textarea name="content" spellcheck="false"></textarea>
+                <div class="modal-error" name="error"></div>
+                <div class="modal-actions">
+                    <button type="button" class="text-btn" name="cancel">Cancel</button>
+                    <button type="button" class="primary-btn" name="save">Save</button>
+                </div>
+            </div>
+        </div>
+    </template>
+
+    <template id="tpl-confirm-modal">
+        <div class="modal-backdrop">
+            <div class="modal">
+                <h2 name="title"></h2>
+                <p name="body"></p>
+                <div class="modal-actions">
+                    <button type="button" class="text-btn" name="cancel">Cancel</button>
+                    <button type="button" class="primary-btn danger" name="confirm">Confirm</button>
+                </div>
+            </div>
+        </div>
+    </template>
+
+    <script type="module" src="gabcode.js"></script>
+</body>
+</html>
