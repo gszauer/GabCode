@@ -1,0 +1,42 @@
+# Build output
+build/
+gabcode
+
+# CMake
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+compile_commands.json
+Makefile
+*.cmake
+!CMakeLists.txt
+
+# Compiled objects and libraries
+*.o
+*.obj
+*.a
+*.lib
+*.so
+*.so.*
+*.dylib
+*.dll
+*.exe
+
+# Editor / IDE
+.vscode/
+.idea/
+.clangd/
+.cache/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Local runtime data (created when running gabcode in this directory)
+.gab/
+
+# Claude Code
+.claude/
