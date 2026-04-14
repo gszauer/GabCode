@@ -1037,7 +1037,8 @@ gabcode/
 │   ├── parser.js                      # <tool>name(args)</tool> parser
 │   ├── tools.js                       # 10 tools + bash builtins (ls/mkdir/…)
 │   ├── llm.js                         # SSE streaming + turn loop + compaction
-│   └── ui.js                          # DOM renderers, modals, file editor
+│   ├── ui.js                          # DOM renderers, modals, file editor
+│   └── zip.js                         # Minimal STORED-format zip writer
 │
 ├── deps/
 │   ├── CMakeLists.txt                 # Header-only INTERFACE target

@@ -155,13 +155,20 @@ function scrollToBottom() {
     el.scrollTop = el.scrollHeight;
 }
 
-function appendMessageNode(node) {
+// "Stuck to bottom" means the user hasn't scrolled up to read earlier content.
+// Streaming updates only auto-scroll if this is true, so a user who scrolls
+// up mid-generation stays where they are.
+function isStuckToBottom(el) {
+    return el.scrollHeight - el.scrollTop - el.clientHeight < 50;
+}
+
+function appendMessageNode(node, forceScroll = false) {
     const el = document.getElementById('messages');
-    // Remove empty-state placeholder if present
     const empty = el.querySelector('.empty-state');
     if (empty) empty.remove();
+    const shouldScroll = forceScroll || isStuckToBottom(el);
     el.appendChild(node);
-    scrollToBottom();
+    if (shouldScroll) scrollToBottom();
 }
 
 function messageShell(roleClass, roleLabel) {
@@ -180,7 +187,9 @@ function messageShell(roleClass, roleLabel) {
 export function renderUserMessage(content) {
     const { wrapper, body } = messageShell('user', 'You');
     body.textContent = content;
-    appendMessageNode(wrapper);
+    // The user just hit send — jump to the bottom unconditionally so they
+    // see their own message land.
+    appendMessageNode(wrapper, true);
 }
 
 export function renderAssistantMessage(content) {
@@ -189,32 +198,181 @@ export function renderAssistantMessage(content) {
     appendMessageNode(wrapper);
 }
 
-// For streaming — returns a handle with .append(delta) and .commit(finalText).
+// For streaming — returns a handle that writes tokens to an assistant bubble,
+// then morphs into a tool-call bubble as soon as `<tool>` appears in the stream.
+// Any preamble text before `<tool>` stays in the assistant bubble; the tool
+// portion lives in a separate yellow bubble that grows as tokens continue to
+// arrive. This avoids the visible "styled after </tool>" delay.
 export function beginAssistantStream() {
-    const { wrapper, body } = messageShell('assistant', 'Assistant');
+    const messagesEl = document.getElementById('messages');
+    const created = [];  // all bubbles we've spawned, for remove()
+
+    let mode = 'assistant';            // 'assistant' | 'toolcall'
+    let toolStartIdx = -1;             // index of `<tool>` in buf, once seen
+    let toolBubble = null;             // handle from createToolCallBubble
+    let toolRaf = 0;                   // pending rAF id for tool-body updates
+    let buf = '';
+
+    let { wrapper, body } = messageShell('assistant', 'Assistant');
     body.textContent = '';
     appendMessageNode(wrapper);
-    let buf = '';
+    created.push(wrapper);
+
+    function switchToToolCall() {
+        toolStartIdx = buf.indexOf('<tool>');
+        const preamble = buf.slice(0, toolStartIdx);
+        if (preamble.trim() === '') {
+            wrapper.remove();
+            const i = created.indexOf(wrapper);
+            if (i >= 0) created.splice(i, 1);
+        } else {
+            body.innerHTML = renderMarkdown(preamble);
+        }
+
+        toolBubble = createToolCallBubble(buf.slice(toolStartIdx));
+        wrapper = toolBubble.wrapper;
+        appendMessageNode(wrapper);
+        created.push(wrapper);
+        mode = 'toolcall';
+    }
+
+    // Coalesce tool-body updates to one per animation frame. The body is
+    // collapsed (hidden) by default so the user doesn't see the intermediate
+    // values; what matters is that the content is current if they expand.
+    // Writing textContent on every incoming token allocates a new text node
+    // per update and produces scroll jank when the model streams fast.
+    function scheduleToolUpdate() {
+        if (toolRaf) return;
+        toolRaf = requestAnimationFrame(() => {
+            toolRaf = 0;
+            if (toolBubble) toolBubble.update(buf.slice(toolStartIdx));
+        });
+    }
+
+    function flushToolUpdate() {
+        if (toolRaf) { cancelAnimationFrame(toolRaf); toolRaf = 0; }
+        if (toolBubble) toolBubble.update(buf.slice(toolStartIdx));
+    }
+
     return {
         append(delta) {
             buf += delta;
-            body.textContent = buf;
-            scrollToBottom();
+            if (mode === 'assistant') {
+                const stick = isStuckToBottom(messagesEl);
+                if (buf.includes('<tool>')) {
+                    switchToToolCall();
+                } else {
+                    body.textContent = buf;
+                }
+                if (stick) scrollToBottom();
+            } else {
+                // Tool-call mode: the body is hidden so there's no visible
+                // layout change and no need to read scroll metrics per token.
+                scheduleToolUpdate();
+            }
         },
         commit(finalText) {
-            body.innerHTML = renderMarkdown(finalText ?? buf);
-            scrollToBottom();
+            const stick = isStuckToBottom(messagesEl);
+            const text = finalText ?? buf;
+            if (mode === 'assistant') {
+                const idx = text.indexOf('<tool>');
+                if (idx >= 0) {
+                    buf = text;
+                    switchToToolCall();
+                    flushToolUpdate();
+                } else {
+                    body.innerHTML = renderMarkdown(text);
+                }
+            } else {
+                buf = text;
+                flushToolUpdate();
+            }
+            if (stick) scrollToBottom();
         },
         remove() {
-            wrapper.remove();
+            if (toolRaf) { cancelAnimationFrame(toolRaf); toolRaf = 0; }
+            for (const n of created) n.remove();
+        },
+        hasToolCall() { return mode === 'toolcall'; },
+        getToolBubble() { return toolBubble; },
+    };
+}
+
+// Extract the tool name from a partial or complete <tool>name(args)</tool> block.
+// Returns '…' if we haven't seen enough yet (e.g. just `<tool>`).
+function parseToolName(raw) {
+    const m = String(raw).match(/<tool>\s*(\w+)/);
+    return m ? m[1] : '…';
+}
+
+// Strip the <tool>...</tool> wrapper for display in the collapsed body. The
+// bubble's color and header label already convey what this is; showing the
+// tags inside would be noise. Tolerates partial streams (no closing tag yet).
+function stripToolTags(raw) {
+    let s = String(raw);
+    if (s.startsWith('<tool>')) s = s.slice('<tool>'.length);
+    if (s.endsWith('</tool>')) s = s.slice(0, -'</tool>'.length);
+    return s;
+}
+
+// Builds a collapsible tool-call bubble. Header shows caret + tool name +
+// spinner; the full raw call lives in a <pre> that's hidden by default.
+// Returns a handle so streaming code can rewrite the content as tokens arrive
+// and flip the spinner off when the tool result arrives.
+function createToolCallBubble(initialRaw, { busy = true } = {}) {
+    const { wrapper, body } = messageShell('tool-call collapsed', 'Tool call');
+    body.innerHTML = '';
+
+    const header = document.createElement('button');
+    header.type = 'button';
+    header.className = 'tool-header';
+
+    const caret = document.createElement('span');
+    caret.className = 'tool-caret';
+    caret.textContent = '▸';
+
+    const nameEl = document.createElement('span');
+    nameEl.className = 'tool-name';
+    nameEl.textContent = parseToolName(initialRaw);
+
+    const spinner = document.createElement('span');
+    spinner.className = 'tool-spinner';
+    if (!busy) spinner.classList.add('done');
+
+    header.appendChild(caret);
+    header.appendChild(nameEl);
+    header.appendChild(spinner);
+    body.appendChild(header);
+
+    const rawEl = document.createElement('pre');
+    rawEl.className = 'tool-raw';
+    rawEl.textContent = stripToolTags(initialRaw);
+    rawEl.hidden = true;
+    body.appendChild(rawEl);
+
+    header.addEventListener('click', () => {
+        const willShow = rawEl.hidden;
+        rawEl.hidden = !willShow;
+        caret.textContent = willShow ? '▾' : '▸';
+        wrapper.classList.toggle('collapsed', !willShow);
+    });
+
+    return {
+        wrapper,
+        update(raw) {
+            rawEl.textContent = stripToolTags(raw);
+            nameEl.textContent = parseToolName(raw);
+        },
+        setBusy(b) {
+            spinner.classList.toggle('done', !b);
         },
     };
 }
 
-export function renderToolCall(raw) {
-    const { wrapper, body } = messageShell('tool-call', 'Tool call');
-    body.textContent = raw;
-    appendMessageNode(wrapper);
+export function renderToolCall(raw, options = {}) {
+    const bubble = createToolCallBubble(raw, options);
+    appendMessageNode(bubble.wrapper);
+    return bubble;
 }
 
 export function renderToolResult(ok, output) {

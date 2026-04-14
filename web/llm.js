@@ -156,7 +156,7 @@ export class TurnRunner {
                     this.emit({ type: 'assistant_message', content: assistantText });
 
                     const errMsg = `parse error: ${tc.parseError}`;
-                    s.messages.push({ role: 'user', content: formatResult(errMsg) });
+                    s.messages.push({ role: 'user', content: formatResult(errMsg), isError: true });
                     await s.history.append({ t: 'tool_result', ok: false, output: errMsg });
                     this.emit({ type: 'tool_result', ok: false, output: errMsg });
                     ++toolCallCount;
@@ -174,7 +174,7 @@ export class TurnRunner {
                 const fp = callFingerprint(tc.name, tc.args);
                 if (fp === lastFingerprint) {
                     const msg = 'DUPLICATE TOOL EXECUTION — ending turn.';
-                    const resultMsg = { role: 'user', content: formatResult(msg) };
+                    const resultMsg = { role: 'user', content: formatResult(msg), isError: true };
                     s.messages.push(resultMsg);
                     await s.history.append({ t: 'tool_result', ok: false, output: msg });
                     this.emit({ type: 'tool_result', ok: false, output: msg });
@@ -203,7 +203,7 @@ export class TurnRunner {
                 }
 
                 const resultBlock = formatResult(result.output);
-                s.messages.push({ role: 'user', content: resultBlock });
+                s.messages.push({ role: 'user', content: resultBlock, isError: !result.ok });
                 await s.history.append({ t: 'tool_result', ok: result.ok, output: result.output });
                 this.emit({ type: 'tool_result', ok: result.ok, output: result.output });
 

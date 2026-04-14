@@ -10,22 +10,28 @@
     <div id="app">
         <aside id="sidebar">
             <div class="sidebar-header">
-                <h1>gabcode</h1>
+                <div class="sidebar-title-group">
+                    <button id="btn-config" class="icon-btn" title="Settings">⚙</button>
+                    <h1>gabcode</h1>
+                </div>
                 <button id="btn-new-chat" class="icon-btn" title="New chat">+</button>
             </div>
             <nav id="chat-list"></nav>
-            <div class="sidebar-footer">
-                <button id="btn-config" class="text-btn" title="Settings">⚙ Settings</button>
-            </div>
         </aside>
 
         <main id="conversation">
             <header id="conv-header">
+                <div class="conv-header-side left">
+                    <button id="btn-toggle-sidebar" class="icon-btn" title="Toggle chat list">◧</button>
+                </div>
                 <div class="title-row">
                     <h2 id="conv-title">No chat selected</h2>
                     <button id="btn-rename" class="icon-btn" title="Rename chat" style="display:none">✎</button>
                 </div>
-                <div id="conv-meta"></div>
+                <div class="conv-header-side right">
+                    <div id="conv-meta"></div>
+                    <button id="btn-toggle-filetree" class="icon-btn" title="Toggle files">◨</button>
+                </div>
             </header>
             <div id="messages"></div>
             <div id="composer">
@@ -41,7 +47,10 @@
         <aside id="filetree">
             <div class="panel-header">
                 <h3>Files</h3>
-                <button id="btn-refresh-tree" class="icon-btn" title="Refresh">↻</button>
+                <div class="panel-actions">
+                    <button id="btn-download-zip" class="icon-btn" title="Download all as zip">⬇</button>
+                    <button id="btn-refresh-tree" class="icon-btn" title="Refresh">↻</button>
+                </div>
             </div>
             <div id="tree-root" class="tree"></div>
         </aside>
@@ -111,8 +120,8 @@
             <div class="modal file-modal">
                 <h2 name="title"></h2>
                 <textarea name="content" spellcheck="false"></textarea>
-                <div class="modal-error" name="error"></div>
                 <div class="modal-actions">
+                    <div class="modal-error inline" name="error"></div>
                     <button type="button" class="text-btn" name="cancel">Cancel</button>
                     <button type="button" class="primary-btn" name="save">Save</button>
                 </div>
