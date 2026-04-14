@@ -5,6 +5,7 @@
 import { VFS, rootVfs } from './vfs.js';
 import { DEFAULT_CONFIG, loadDefaults, saveChatConfig } from './config.js';
 import { writeDefaultPrompts } from './prompts.js';
+import { seedBundledSkills } from './bundled-skills.js';
 
 const META_PATH = '.gab/chat_meta.json';
 const ACTIVE_PATH = 'defaults/active_chat.txt';
@@ -55,6 +56,9 @@ export async function createChat(name) {
 
     // Seed the default prompt files (system, compactor, web_search, explore).
     await writeDefaultPrompts(v);
+
+    // Seed any bundled skills the web build ships with (e.g. phaser).
+    await seedBundledSkills(v);
 
     return { id, name: displayName, createdAt: now, lastActiveAt: now };
 }

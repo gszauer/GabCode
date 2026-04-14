@@ -1032,6 +1032,7 @@ gabcode/
 │   ├── config.js                      # Settings + `/v1/models` probe (JS re-impl)
 │   ├── prompts.js                     # Default prompts + read/write helpers
 │   ├── skills.js                      # SkillLoader: scan, load, summaries
+│   ├── bundled-skills.js              # Seeds web/<name>/ skill folders per chat
 │   ├── agents.js                      # web_search / explore / compactor
 │   ├── history.js                     # JSONL log + rehydration
 │   ├── parser.js                      # <tool>name(args)</tool> parser

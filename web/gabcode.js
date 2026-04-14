@@ -9,6 +9,7 @@ import { History } from './history.js';
 import { TurnRunner } from './llm.js';
 import { SkillLoader } from './skills.js';
 import { writeDefaultPrompts } from './prompts.js';
+import { seedBundledSkills } from './bundled-skills.js';
 import { TOOLS } from './tools.js';
 import { AGENT_DEFS, runAgent, compact } from './agents.js';
 import * as ui from './ui.js';
@@ -144,9 +145,10 @@ async function handleSelectChat(id) {
         if (!config) config = { ...DEFAULT_CONFIG };
         state.session = new Session(id, vfs, config);
 
-        // Seed any missing default prompt files (for chats that predate this
-        // feature). Existing user edits are preserved.
+        // Seed any missing default prompt files + bundled skills (for chats
+        // that predate this feature). Existing user edits are preserved.
         await writeDefaultPrompts(vfs);
+        await seedBundledSkills(vfs);
         await state.session.skills.scan();
 
         // Rehydrate messages from history.jsonl

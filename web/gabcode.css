@@ -266,12 +266,6 @@ html, body {
 .msg.user .msg-body {
     background: var(--bg-sub);
     border: 1px solid var(--border);
-    align-self: flex-end;
-    max-width: 80%;
-}
-
-.msg.user .msg-role {
-    align-self: flex-end;
 }
 
 .msg.assistant .msg-body {
