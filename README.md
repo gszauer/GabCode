@@ -21,11 +21,10 @@ tomorrow.
   in a row (same name, same args), the harness skips the second dispatch
   and ends the turn with a clear `DUPLICATE TOOL EXECUTION` signal instead
   of grinding uselessly against the tool-call limit.
-- **11 built-in tools**: `readFile`, `writeFile`, `editFile`, `editFileAll`,
-  `grep`, `grepIn`, `bash`, `webFetch`, `braveSearch`, `skill`, `agent`.
-- **10 portable built-in shell commands** (`ls`, `cat`, `grep`, `mkdir`, `rm`,
-  `rmdir`, `cp`, `mv`, `pwd`, `echo`) that work even when no host shell is
-  registered.
+- **10 built-in tools**: `readFile`, `writeFile`, `editFile`, `grep`, `grepIn`,
+  `bash`, `webFetch`, `braveSearch`, `skill`, `agent`.
+- **6 portable built-in shell commands** (`ls`, `mkdir`, `rm`, `rmdir`, `cp`,
+  `mv`) that work even when no host shell is registered.
 - **Skills** — drop a folder under `.gab/skills/<name>/` with a `SKILL.md`
   (YAML front matter) and the model can load it on demand.
 - **Agents** — sub-sessions with their own system prompt and restricted tool

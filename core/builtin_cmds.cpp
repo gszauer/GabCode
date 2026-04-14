@@ -50,16 +50,12 @@ bool is_simple_builtin(const std::string& cmd) {
 
 static const std::unordered_map<std::string, ShellHandler>& builtin_table() {
     static const std::unordered_map<std::string, ShellHandler> table = {
-        {"pwd",   builtin_pwd},
-        {"echo",  builtin_echo},
-        {"cat",   builtin_cat},
         {"ls",    builtin_ls},
         {"mkdir", builtin_mkdir},
         {"rmdir", builtin_rmdir},
         {"rm",    builtin_rm},
         {"mv",    builtin_mv},
         {"cp",    builtin_cp},
-        {"grep",  builtin_grep_cmd},
     };
     return table;
 }

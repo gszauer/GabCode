@@ -999,7 +999,7 @@ gabcode/
 │   │
 │   ├── read_file.cpp                  # ← one .cpp per tool
 │   ├── write_file.cpp
-│   ├── edit_file.cpp                  # editFile + editFileAll
+│   ├── edit_file.cpp                  # editFile
 │   ├── grep_tool.cpp                  # grep + grepIn (std::regex ECMAScript)
 │   ├── bash_tool.cpp                  # shell + built-in dispatch
 │   ├── web_fetch.cpp
@@ -1015,7 +1015,7 @@ gabcode/
 │   ├── stream_consumer.{h,cpp}        # Events → tokens + usage
 │   │
 │   ├── builtin_cmds.{h,cpp}           # Shell tokenizer, is_simple check
-│   └── commands.cpp                   # Built-in ls/cat/rm/cp/mv/etc.
+│   └── commands.cpp                   # Built-in ls/mkdir/rmdir/rm/cp/mv
 │
 ├── cli/                               # CLI shell
 │   ├── CMakeLists.txt                 # Links gabcore_static + libcurl

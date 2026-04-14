@@ -22,15 +22,11 @@ bool is_simple_builtin(const std::string& cmd);
 std::optional<ToolResult> try_run_builtin(Session& session, const std::string& cmd);
 
 // Individual built-in implementations
-ToolResult builtin_pwd(Session& s, const std::vector<std::string>& argv);
-ToolResult builtin_echo(Session& s, const std::vector<std::string>& argv);
-ToolResult builtin_cat(Session& s, const std::vector<std::string>& argv);
 ToolResult builtin_ls(Session& s, const std::vector<std::string>& argv);
 ToolResult builtin_mkdir(Session& s, const std::vector<std::string>& argv);
 ToolResult builtin_rmdir(Session& s, const std::vector<std::string>& argv);
 ToolResult builtin_rm(Session& s, const std::vector<std::string>& argv);
 ToolResult builtin_mv(Session& s, const std::vector<std::string>& argv);
 ToolResult builtin_cp(Session& s, const std::vector<std::string>& argv);
-ToolResult builtin_grep_cmd(Session& s, const std::vector<std::string>& argv);
 
 } // namespace gab

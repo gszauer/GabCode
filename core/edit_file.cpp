@@ -51,54 +51,12 @@ static ToolResult tool_edit_file(Session& session, std::span<const ToolArg> args
     return {true, "ok"};
 }
 
-static ToolResult tool_edit_file_all(Session& session, std::span<const ToolArg> args) {
-    const std::string& path = args[0].sval;
-    const std::string& old_str = args[1].sval;
-    const std::string& new_str = args[2].sval;
-
-    auto read_result = session.host().read_file(path);
-    if (!read_result) {
-        return {false, "cannot read file: " + path};
-    }
-
-    std::string contents = std::move(read_result.value());
-
-    if (old_str.empty()) {
-        return {false, "oldString must not be empty"};
-    }
-
-    size_t count = 0;
-    size_t pos = 0;
-    while ((pos = contents.find(old_str, pos)) != std::string::npos) {
-        contents.replace(pos, old_str.size(), new_str);
-        pos += new_str.size();
-        ++count;
-    }
-
-    if (count == 0) {
-        return {false, "oldString not found in file"};
-    }
-
-    auto write_result = session.host().write_file(path, contents);
-    if (!write_result) {
-        return {false, "write failed: " + path};
-    }
-
-    return {true, std::to_string(count)};
-}
-
 void register_edit_file(ToolDispatcher& d) {
     d.register_tool({
         "editFile",
         "Replace exactly one occurrence of oldString with newString in a file. File must have been read first.",
         {ArgType::Str, ArgType::Str, ArgType::Str},
         tool_edit_file
-    });
-    d.register_tool({
-        "editFileAll",
-        "Replace all occurrences of oldString with newString in a file.",
-        {ArgType::Str, ArgType::Str, ArgType::Str},
-        tool_edit_file_all
     });
 }
 
