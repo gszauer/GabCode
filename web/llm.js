@@ -279,6 +279,25 @@ export class TurnRunner {
         let buffer = '';
         let assistantText = '';
         let stoppedOnToolClose = false;
+        let inThink = false;  // true while a synthetic <think> block is open
+
+        // Some OpenAI-compatible servers surface reasoning on a separate delta
+        // field (OpenRouter: `reasoning`; DeepSeek: `reasoning_content`) rather
+        // than inlining `<think>` tags in `content`. Wrap those chunks in
+        // `<think>...</think>` so the UI parser treats them the same way.
+        const pushDelta = (text, { reasoning }) => {
+            if (reasoning && !inThink) {
+                assistantText += '<think>';
+                this.emit({ type: 'delta', content: '<think>' });
+                inThink = true;
+            } else if (!reasoning && inThink) {
+                assistantText += '</think>';
+                this.emit({ type: 'delta', content: '</think>' });
+                inThink = false;
+            }
+            assistantText += text;
+            this.emit({ type: 'delta', content: text });
+        };
 
         this.emit({ type: 'stream_start' });
 
@@ -301,11 +320,10 @@ export class TurnRunner {
                     try {
                         const json = JSON.parse(payload);
                         const choice = json.choices?.[0];
-                        const delta = choice?.delta?.content;
-                        if (delta) {
-                            assistantText += delta;
-                            this.emit({ type: 'delta', content: delta });
-                        }
+                        const d = choice?.delta;
+                        const reasoning = d?.reasoning ?? d?.reasoning_content;
+                        if (reasoning) pushDelta(reasoning, { reasoning: true });
+                        if (d?.content) pushDelta(d.content, { reasoning: false });
                         if (choice?.finish_reason === 'stop') {
                             stoppedOnToolClose = true;
                         }
@@ -316,6 +334,14 @@ export class TurnRunner {
                     } catch { /* skip malformed lines */ }
                 }
             }
+        }
+
+        // Close any still-open synthetic think block (stream ended while the
+        // server was only sending reasoning chunks).
+        if (inThink) {
+            assistantText += '</think>';
+            this.emit({ type: 'delta', content: '</think>' });
+            inThink = false;
         }
 
         // If the stop sequence was hit, the server will have consumed `</tool>`

@@ -141,12 +141,22 @@ export function clearMessages() {
     el.innerHTML = '';
 }
 
-export function showEmptyConversation(text) {
+export function showEmptyConversation(text, action) {
     const el = document.getElementById('messages');
     el.innerHTML = '';
     const empty = document.createElement('div');
     empty.className = 'empty-state';
-    empty.textContent = text;
+    const msg = document.createElement('div');
+    msg.className = 'empty-state-text';
+    msg.textContent = text;
+    empty.appendChild(msg);
+    if (action) {
+        const btn = document.createElement('button');
+        btn.className = 'primary-btn neutral';
+        btn.textContent = action.label;
+        btn.addEventListener('click', action.onClick);
+        empty.appendChild(btn);
+    }
     el.appendChild(empty);
 }
 
@@ -192,109 +202,184 @@ export function renderUserMessage(content) {
     appendMessageNode(wrapper, true);
 }
 
-export function renderAssistantMessage(content) {
-    const { wrapper, body } = messageShell('assistant', 'Assistant');
-    body.innerHTML = renderMarkdown(content);
-    appendMessageNode(wrapper);
+// Parse an assistant buffer into ordered segments of type 'text', 'think', or
+// 'tool'. `<think>...</think>` is extracted as a separate segment and rendered
+// as a blue thinking bubble; `<tool>...` consumes everything to end-of-buffer
+// (tool is terminal). Each segment carries a `complete` flag so streaming code
+// can tell whether the tail is still growing.
+//
+// For streaming, we also hold back any trailing bytes that could be the start
+// of a `<think>` or `<tool>` tag — otherwise "fo" + "o<th" + "ink>..." would
+// briefly render "foo<th" as plain text before reinterpreting it.
+function parseAssistantSegments(buf, { streaming = false } = {}) {
+    const TAG_PREFIXES = ['<think>', '<tool>'];
+    const segs = [];
+    let i = 0;
+    let textStart = 0;
+
+    const pushText = (from, to, complete) => {
+        if (to > from) segs.push({ type: 'text', content: buf.slice(from, to), complete });
+    };
+
+    while (i < buf.length) {
+        if (buf.startsWith('<think>', i)) {
+            pushText(textStart, i, true);
+            const end = buf.indexOf('</think>', i + 7);
+            if (end < 0) {
+                segs.push({ type: 'think', content: buf.slice(i + 7), complete: false });
+                return segs;
+            }
+            segs.push({ type: 'think', content: buf.slice(i + 7, end), complete: true });
+            i = end + '</think>'.length;
+            textStart = i;
+            continue;
+        }
+        if (buf.startsWith('<tool>', i)) {
+            pushText(textStart, i, true);
+            segs.push({
+                type: 'tool',
+                content: buf.slice(i),
+                complete: buf.indexOf('</tool>', i) >= 0,
+            });
+            return segs;
+        }
+        i++;
+    }
+
+    let end = buf.length;
+    if (streaming) {
+        const maxHold = Math.min(6, end - textStart);
+        for (let len = maxHold; len >= 1; len--) {
+            const tail = buf.slice(end - len);
+            if (TAG_PREFIXES.some(p => p.startsWith(tail))) {
+                end -= len;
+                break;
+            }
+        }
+    }
+    pushText(textStart, end, !streaming);
+    return segs;
 }
 
-// For streaming — returns a handle that writes tokens to an assistant bubble,
-// then morphs into a tool-call bubble as soon as `<tool>` appears in the stream.
-// Any preamble text before `<tool>` stays in the assistant bubble; the tool
-// portion lives in a separate yellow bubble that grows as tokens continue to
-// arrive. This avoids the visible "styled after </tool>" delay.
+function createAssistantTextBubble() {
+    const { wrapper, body } = messageShell('assistant', 'Assistant');
+    body.textContent = '';
+    return {
+        type: 'text',
+        wrapper,
+        update(seg) {
+            if (seg.complete) body.innerHTML = renderMarkdown(seg.content);
+            else body.textContent = seg.content;
+        },
+    };
+}
+
+function createThinkingBubble() {
+    const { wrapper, body } = messageShell('thinking', 'Thinking');
+    body.textContent = '';
+    return {
+        type: 'think',
+        wrapper,
+        update(seg) { body.textContent = seg.content; },
+    };
+}
+
+function createToolSegmentBubble(seg) {
+    const bubble = createToolCallBubble(seg.content);
+    return {
+        type: 'tool',
+        wrapper: bubble.wrapper,
+        _inner: bubble,
+        update(s) { bubble.update(s.content); },
+        setBusy(b) { bubble.setBusy(b); },
+    };
+}
+
+function makeSegmentBubble(seg) {
+    if (seg.type === 'text') return createAssistantTextBubble();
+    if (seg.type === 'think') return createThinkingBubble();
+    return createToolSegmentBubble(seg);
+}
+
+export function renderAssistantMessage(content) {
+    const segs = parseAssistantSegments(content);
+    for (const seg of segs) {
+        if (seg.type === 'text' && seg.content.trim() === '') continue;
+        const bubble = makeSegmentBubble(seg);
+        if (seg.type === 'tool') bubble.setBusy(false);
+        bubble.update(seg);
+        appendMessageNode(bubble.wrapper);
+    }
+}
+
+// For streaming — reconciles a list of DOM bubbles against the current parse
+// of the buffer. Each new `<think>` block spawns a blue thinking bubble; any
+// `<tool>` flips the tail into a yellow tool-call bubble. Updates coalesce
+// onto a requestAnimationFrame to keep fast token streams from thrashing
+// layout.
 export function beginAssistantStream() {
     const messagesEl = document.getElementById('messages');
-    const created = [];  // all bubbles we've spawned, for remove()
-
-    let mode = 'assistant';            // 'assistant' | 'toolcall'
-    let toolStartIdx = -1;             // index of `<tool>` in buf, once seen
-    let toolBubble = null;             // handle from createToolCallBubble
-    let toolRaf = 0;                   // pending rAF id for tool-body updates
+    const bubbles = [];
     let buf = '';
+    let raf = 0;
 
-    let { wrapper, body } = messageShell('assistant', 'Assistant');
-    body.textContent = '';
-    appendMessageNode(wrapper);
-    created.push(wrapper);
-
-    function switchToToolCall() {
-        toolStartIdx = buf.indexOf('<tool>');
-        const preamble = buf.slice(0, toolStartIdx);
-        if (preamble.trim() === '') {
-            wrapper.remove();
-            const i = created.indexOf(wrapper);
-            if (i >= 0) created.splice(i, 1);
-        } else {
-            body.innerHTML = renderMarkdown(preamble);
+    function reconcile() {
+        const segs = parseAssistantSegments(buf, { streaming: true });
+        for (let i = 0; i < segs.length; i++) {
+            const seg = segs[i];
+            if (!bubbles[i]) {
+                bubbles[i] = makeSegmentBubble(seg);
+                appendMessageNode(bubbles[i].wrapper);
+            }
+            bubbles[i].update(seg);
         }
-
-        toolBubble = createToolCallBubble(buf.slice(toolStartIdx));
-        wrapper = toolBubble.wrapper;
-        appendMessageNode(wrapper);
-        created.push(wrapper);
-        mode = 'toolcall';
     }
 
-    // Coalesce tool-body updates to one per animation frame. The body is
-    // collapsed (hidden) by default so the user doesn't see the intermediate
-    // values; what matters is that the content is current if they expand.
-    // Writing textContent on every incoming token allocates a new text node
-    // per update and produces scroll jank when the model streams fast.
-    function scheduleToolUpdate() {
-        if (toolRaf) return;
-        toolRaf = requestAnimationFrame(() => {
-            toolRaf = 0;
-            if (toolBubble) toolBubble.update(buf.slice(toolStartIdx));
-        });
-    }
-
-    function flushToolUpdate() {
-        if (toolRaf) { cancelAnimationFrame(toolRaf); toolRaf = 0; }
-        if (toolBubble) toolBubble.update(buf.slice(toolStartIdx));
+    function scheduleReconcile() {
+        if (raf) return;
+        raf = requestAnimationFrame(() => { raf = 0; reconcile(); });
     }
 
     return {
         append(delta) {
             buf += delta;
-            if (mode === 'assistant') {
-                const stick = isStuckToBottom(messagesEl);
-                if (buf.includes('<tool>')) {
-                    switchToToolCall();
-                } else {
-                    body.textContent = buf;
-                }
-                if (stick) scrollToBottom();
-            } else {
-                // Tool-call mode: the body is hidden so there's no visible
-                // layout change and no need to read scroll metrics per token.
-                scheduleToolUpdate();
-            }
+            const stick = isStuckToBottom(messagesEl);
+            scheduleReconcile();
+            if (stick) scrollToBottom();
         },
         commit(finalText) {
+            if (finalText != null) buf = finalText;
             const stick = isStuckToBottom(messagesEl);
-            const text = finalText ?? buf;
-            if (mode === 'assistant') {
-                const idx = text.indexOf('<tool>');
-                if (idx >= 0) {
-                    buf = text;
-                    switchToToolCall();
-                    flushToolUpdate();
-                } else {
-                    body.innerHTML = renderMarkdown(text);
+            // Final parse treats everything as complete so text segments get
+            // markdown-rendered instead of staying as plain textContent.
+            if (raf) { cancelAnimationFrame(raf); raf = 0; }
+            const segs = parseAssistantSegments(buf);
+            for (let i = 0; i < segs.length; i++) {
+                if (!bubbles[i]) {
+                    bubbles[i] = makeSegmentBubble(segs[i]);
+                    appendMessageNode(bubbles[i].wrapper);
                 }
-            } else {
-                buf = text;
-                flushToolUpdate();
+                bubbles[i].update(segs[i]);
+            }
+            // Drop a trailing empty-text bubble (can appear if the model
+            // finishes a think block with no following prose).
+            while (bubbles.length > segs.length) bubbles.pop().wrapper.remove();
+            const last = segs[segs.length - 1];
+            if (last?.type === 'text' && last.content.trim() === '') {
+                bubbles[segs.length - 1]?.wrapper.remove();
+                bubbles.length = segs.length - 1;
             }
             if (stick) scrollToBottom();
         },
         remove() {
-            if (toolRaf) { cancelAnimationFrame(toolRaf); toolRaf = 0; }
-            for (const n of created) n.remove();
+            if (raf) { cancelAnimationFrame(raf); raf = 0; }
+            for (const b of bubbles) b.wrapper.remove();
         },
-        hasToolCall() { return mode === 'toolcall'; },
-        getToolBubble() { return toolBubble; },
+        hasToolCall() { return bubbles.some(b => b.type === 'tool'); },
+        getToolBubble() {
+            const b = bubbles.find(b => b.type === 'tool');
+            return b?._inner || null;
+        },
     };
 }
 

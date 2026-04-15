@@ -68,7 +68,11 @@ async function refreshFileTree() {
 async function renderConversation() {
     ui.clearMessages();
     if (!state.session) {
-        ui.showEmptyConversation('Select or create a chat to start.');
+        if (state.chats.length === 0) {
+            ui.showEmptyConversation('No chats yet.', { label: 'Create chat', onClick: handleNewChat });
+        } else {
+            ui.showEmptyConversation('Select or create a chat to start.');
+        }
         return;
     }
     if (state.session.messages.length === 0) {
@@ -85,21 +89,7 @@ async function renderConversation() {
                 ui.renderUserMessage(m.content);
             }
         } else if (m.role === 'assistant') {
-            // If the assistant message contains a tool call, split the display
-            const toolIdx = m.content.indexOf('<tool>');
-            if (toolIdx >= 0) {
-                const preamble = m.content.slice(0, toolIdx).trim();
-                if (preamble) ui.renderAssistantMessage(preamble);
-                const closeIdx = m.content.indexOf('</tool>', toolIdx);
-                if (closeIdx >= 0) {
-                    ui.renderToolCall(
-                        m.content.slice(toolIdx, closeIdx + '</tool>'.length),
-                        { busy: false },
-                    );
-                }
-            } else {
-                ui.renderAssistantMessage(m.content);
-            }
+            ui.renderAssistantMessage(m.content);
         }
     }
 }
@@ -541,18 +531,43 @@ function saveUiPrefs(patch) {
 function setupSidebarToggles() {
     const app = document.getElementById('app');
     const prefs = loadUiPrefs();
-    const sidebarCollapsed  = prefs.sidebarCollapsed  ?? false;
-    const filetreeCollapsed = prefs.filetreeCollapsed ?? true;
+    // On mobile, force both panels closed on every load regardless of saved
+    // prefs — those prefs were typically set on desktop where "sidebar open"
+    // is sensible, and on a phone they'd cover the whole conversation on
+    // first paint. Desktop default: chat list open, file tree closed.
+    const isMobile = window.matchMedia('(max-width: 768px)').matches;
+    const sidebarCollapsed  = isMobile ? true : (prefs.sidebarCollapsed  ?? false);
+    const filetreeCollapsed = isMobile ? true : (prefs.filetreeCollapsed ?? true);
     app.classList.toggle('sidebar-collapsed',  sidebarCollapsed);
     app.classList.toggle('filetree-collapsed', filetreeCollapsed);
 
+    const isMobileNow = () => window.matchMedia('(max-width: 768px)').matches;
+
     document.getElementById('btn-toggle-sidebar').addEventListener('click', () => {
+        const opening = app.classList.contains('sidebar-collapsed');
         app.classList.toggle('sidebar-collapsed');
-        saveUiPrefs({ sidebarCollapsed: app.classList.contains('sidebar-collapsed') });
+        // On mobile, opening one overlay closes the other so the backdrop
+        // never stacks two slide-outs on top of each other.
+        if (opening && isMobileNow()) app.classList.add('filetree-collapsed');
+        saveUiPrefs({
+            sidebarCollapsed:  app.classList.contains('sidebar-collapsed'),
+            filetreeCollapsed: app.classList.contains('filetree-collapsed'),
+        });
     });
     document.getElementById('btn-toggle-filetree').addEventListener('click', () => {
+        const opening = app.classList.contains('filetree-collapsed');
         app.classList.toggle('filetree-collapsed');
-        saveUiPrefs({ filetreeCollapsed: app.classList.contains('filetree-collapsed') });
+        if (opening && isMobileNow()) app.classList.add('sidebar-collapsed');
+        saveUiPrefs({
+            sidebarCollapsed:  app.classList.contains('sidebar-collapsed'),
+            filetreeCollapsed: app.classList.contains('filetree-collapsed'),
+        });
+    });
+
+    document.getElementById('mobile-backdrop').addEventListener('click', () => {
+        app.classList.add('sidebar-collapsed');
+        app.classList.add('filetree-collapsed');
+        saveUiPrefs({ sidebarCollapsed: true, filetreeCollapsed: true });
     });
 }
 
@@ -634,7 +649,7 @@ async function init() {
     } else if (state.chats.length > 0) {
         await handleSelectChat(state.chats[0].id);
     } else {
-        ui.showEmptyConversation('Click + in the sidebar to create your first chat.');
+        ui.showEmptyConversation('No chats yet.', { label: 'Create chat', onClick: handleNewChat });
     }
 
     // If handleSelectChat didn't already open settings (e.g. because the
