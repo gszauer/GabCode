@@ -1,6 +1,7 @@
 # Build output
 build/
 web_build/
+gab
 gabcode
 
 # CMake
@@ -36,7 +37,7 @@ Makefile
 .DS_Store
 Thumbs.db
 
-# Local runtime data (created when running gabcode in this directory)
+# Local runtime data (created when running gab in this directory)
 .gab/
 
 # Claude Code

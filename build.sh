@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Build gabcode CLI and stage the web shell. Run tests with `./build.sh test`. Wipe with `./build.sh clean`.
+# Build gab CLI and stage the web shell. Run tests with `./build.sh test`. Wipe with `./build.sh clean`.
 set -e
 
 cd "$(dirname "$0")"
@@ -34,8 +34,8 @@ PYEOF
 
 case "${1:-}" in
     clean)
-        rm -rf build web_build gabcode
-        echo "Cleaned build/, web_build/, and gabcode binary."
+        rm -rf build web_build gab
+        echo "Cleaned build/, web_build/, and gab binary."
         exit 0
         ;;
     test)
@@ -63,6 +63,6 @@ cp -R web/. web_build/
 gen_bundled_skills_manifest web_build
 
 echo ""
-echo "Built ./gabcode and staged web/ → web_build/."
+echo "Built ./gab and staged web/ → web_build/."
 echo "Run the CLI with:"
-echo "  ./gabcode"
+echo "  ./gab"

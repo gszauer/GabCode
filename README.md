@@ -51,10 +51,10 @@ Requires: CMake 3.20+, a C++20 compiler, libcurl.
 ./build.sh          # build CLI + stage web shell (incremental)
 ./build.sh test     # build and run all tests
 ./build.sh web      # stage web/ sources to web_build/ only
-./build.sh clean    # wipe build/, web_build/, and the gabcode binary
+./build.sh clean    # wipe build/, web_build/, and the gab binary
 ```
 
-The CLI lands at `./gabcode` in the project root. The web shell is staged to
+The CLI lands at `./gab` in the project root. The web shell is staged to
 `web_build/` — open `web_build/index.html` via any static HTTP server (e.g.
 `python3 -m http.server` from `web_build/`) and configure it from the gear
 icon in the sidebar. Each chat lives in its own IndexedDB-backed `.gab/`, so
@@ -63,7 +63,7 @@ state is isolated per conversation.
 ## Run (CLI)
 
 ```sh
-./gabcode
+./gab
 ```
 
 On first run, an interactive wizard walks you through:
@@ -85,9 +85,9 @@ the next turn.
 ### Customising prompts
 
 The files under `.gab/prompts/` (`system.md`, `compactor.md`, `web_search.md`,
-`explore.md`) are yours to edit — gabcode only writes defaults when a file is
+`explore.md`) are yours to edit — gab only writes defaults when a file is
 missing. To pick up a newer default after an upgrade, delete the file and
-re-run `gabcode`; it'll regenerate only the missing one.
+re-run `gab`; it'll regenerate only the missing one.
 
 `system.md` supports two placeholders that are substituted on every turn:
 
