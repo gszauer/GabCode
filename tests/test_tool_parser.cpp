@@ -105,6 +105,28 @@ static void test_text_before_and_after() {
     std::printf("  PASS: text before and after tool tag\n");
 }
 
+static void test_backtick_string() {
+    // Models reach for backticks when the content spans multiple lines or
+    // contains double-quotes. Accept them as an alternate string delimiter.
+    auto r = parse_tool_call("<tool>writeFile(`out.txt`, `line one\nline \"two\"`)</tool>");
+    assert(r.status == ToolParseResult::Ok);
+    assert(r.call.args.size() == 2);
+    assert(r.call.args[0].sval == "out.txt");
+    assert(r.call.args[1].sval == "line one\nline \"two\"");
+    std::printf("  PASS: backtick string arg\n");
+}
+
+static void test_mixed_quotes() {
+    // One arg double-quoted, one arg backticked.
+    auto r = parse_tool_call("<tool>editFile(\"f.cpp\", `old`, \"new\")</tool>");
+    assert(r.status == ToolParseResult::Ok);
+    assert(r.call.args.size() == 3);
+    assert(r.call.args[0].sval == "f.cpp");
+    assert(r.call.args[1].sval == "old");
+    assert(r.call.args[2].sval == "new");
+    std::printf("  PASS: mixed quote delimiters\n");
+}
+
 static void test_decimal_number() {
     auto r = parse_tool_call(R"(<tool>setTemp(0.7)</tool>)");
     assert(r.status == ToolParseResult::Ok);
@@ -127,6 +149,8 @@ int main() {
     test_angle_bracket_in_body();
     test_whitespace_tolerance();
     test_text_before_and_after();
+    test_backtick_string();
+    test_mixed_quotes();
     test_decimal_number();
     std::printf("All tests passed.\n");
     return 0;

@@ -264,7 +264,7 @@ void Session::send_as_user(std::string_view input, gab_event_cb cb, void* ud) {
         // Re-append </tool> if stripped, and emit it as a text delta so the
         // user sees a complete, closed tool tag in the streamed output.
         if (assistant_text.find("</tool>") == std::string::npos) {
-            static const char kClose[] = "</tool>\n";
+            static const char kClose[] = "</tool>";
             gab_str_t close_str = {kClose, sizeof(kClose) - 1};
             gab_event_t close_evt = {GAB_EVENT_TEXT_DELTA, close_str};
             cb(close_evt, ud);
@@ -311,11 +311,12 @@ void Session::send_as_user(std::string_view input, gab_event_cb cb, void* ud) {
             result_body = "<result>" + tool_result.text + "</result>";
         }
 
-        // Store the result as a user message and emit it as a TOOL_RESULT event
-        // (with a leading newline for display continuity after </tool>).
+        // Store the result as a user message and emit it as a TOOL_RESULT event.
+        // Leading "\n" breaks the line after </tool>; trailing "\n\n" leaves a
+        // blank line before the next assistant text streams in.
         messages_.push_back({Role::User, result_body});
 
-        std::string display_block = "\n" + result_body;
+        std::string display_block = "\n" + result_body + "\n\n";
         gab_str_t result_str = {display_block.data(), display_block.size()};
         gab_event_t result_evt = {GAB_EVENT_TOOL_RESULT, result_str};
         cb(result_evt, ud);

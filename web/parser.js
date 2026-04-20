@@ -48,7 +48,7 @@ function parseArgs(src) {
         skipWs();
         if (i >= src.length) break;
         const c = src[i];
-        if (c === '"' || c === "'") {
+        if (c === '"' || c === "'" || c === '`') {
             const quote = c;
             ++i;
             let buf = '';

@@ -13,8 +13,10 @@ size_t skip_ws(std::string_view s, size_t pos) {
     return pos;
 }
 
-// Parse a double-quoted string argument starting at pos (which points at the opening '"').
-// Returns the parsed string and the position after the closing '"'.
+// Parse a quoted string argument starting at pos. Canonical delimiter is '"',
+// but '`' is accepted too — models reach for backticks when pasting multi-line
+// content, and rejecting them would just cost a retry round-trip.
+// Returns the parsed string and the position after the closing delimiter.
 struct StringParseResult {
     bool ok;
     std::string value;
@@ -23,8 +25,9 @@ struct StringParseResult {
 };
 
 StringParseResult parse_string_arg(std::string_view s, size_t pos) {
-    if (pos >= s.size() || s[pos] != '"')
-        return {false, {}, pos, "expected opening '\"'"};
+    if (pos >= s.size() || (s[pos] != '"' && s[pos] != '`'))
+        return {false, {}, pos, "expected opening '\"' or '`'"};
+    char quote = s[pos];
     ++pos; // skip opening quote
 
     std::string val;
@@ -34,6 +37,7 @@ StringParseResult parse_string_arg(std::string_view s, size_t pos) {
             char next = s[pos + 1];
             switch (next) {
                 case '"':  val += '"'; break;
+                case '`':  val += '`'; break;
                 case '\\': val += '\\'; break;
                 case 'n':  val += '\n'; break;
                 case 't':  val += '\t'; break;
@@ -41,7 +45,7 @@ StringParseResult parse_string_arg(std::string_view s, size_t pos) {
                 default:   val += next; break; // lenient: \X -> X
             }
             pos += 2;
-        } else if (c == '"') {
+        } else if (c == quote) {
             return {true, std::move(val), pos + 1, {}};
         } else {
             val += c;
@@ -123,7 +127,7 @@ ToolParseResult parse_call_body(std::string_view body) {
         }
 
         char c = body[pos];
-        if (c == '"') {
+        if (c == '"' || c == '`') {
             // String argument
             auto sr = parse_string_arg(body, pos);
             if (!sr.ok) {
