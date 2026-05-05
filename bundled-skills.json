@@ -1,0 +1,10 @@
+{
+  "phaser": [
+    "SKILL.md",
+    "references/arcade-physics.md",
+    "references/core-patterns.md",
+    "references/performance.md",
+    "references/spritesheets-nineslice.md",
+    "references/tilemaps.md"
+  ]
+}
